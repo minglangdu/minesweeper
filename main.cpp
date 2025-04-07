@@ -29,25 +29,14 @@ const string paths[] = {
 const int cellsize = 25;
 const int gridwidth = 16;
 const int gridheight = 16;
-const int mineamount = 40;
+const int mineamount = 30;
 
 class GWind {
     public:
         GWind(int width, int height) {
-            grid.resize(gridheight, vector<int> (gridwidth, -1));
-            mines.resize(gridheight, vector<bool> (gridwidth, false));
-            
-            random_device rd;
-            mt19937 mt (rd());
-            uniform_int_distribution<mt19937::result_type> xs(0, gridwidth - 1), ys(0, gridheight - 1);
-
-            for (int i = 0; i < mineamount; i ++) {
-                int x = xs(mt), y = ys(mt);
-                if (mines[y][x]) continue;
-                mines[y][x] = true;
-            }
-
-            /*SDL*/
+            face.w = cellsize * 1.5; face.h = cellsize * 1.5;
+            face.x = 235; face.y = 5;
+            begin();
 
             window = SDL_CreateWindow("Minesweeper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             width, height, SDL_WINDOW_SHOWN);
@@ -65,6 +54,28 @@ class GWind {
             }
         }
 
+        void begin() {
+            started = true;
+            grid.resize(gridheight, vector<int> (gridwidth, -1));
+            mines.resize(gridheight, vector<bool> (gridwidth, false));
+
+            for (int i = 0; i < mines.size(); i ++) {
+                for (int j = 0; j < mines[0].size(); j ++) {
+                    grid[i][j] = -1;
+                }
+            }
+
+            random_device rd;
+            mt19937 mt (rd());
+            uniform_int_distribution<mt19937::result_type> xs(0, gridwidth - 1), ys(0, gridheight - 1);
+
+            for (int i = 0; i < mineamount; i ++) {
+                int x = xs(mt), y = ys(mt);
+                if (mines[y][x]) continue;
+                mines[y][x] = true;
+            }
+        }
+
         void startLoop() {
             while (!quit) {
                 loop();
@@ -76,9 +87,9 @@ class GWind {
                 if (e.type == SDL_QUIT) {
                     quit = true;
                 }
-                if (e.type == SDL_MOUSEMOTION || 
+                if (started && (e.type == SDL_MOUSEMOTION || 
                     e.type == SDL_MOUSEBUTTONDOWN || 
-                    e.type == SDL_MOUSEBUTTONUP) {
+                    e.type == SDL_MOUSEBUTTONUP)) {
                     int x, y, cellx, celly; 
                     SDL_GetMouseState(&x, &y);
                     if (x >= 50 && x <= cellsize * (gridwidth) + 50
@@ -97,6 +108,7 @@ class GWind {
                                 if (mines[celly][cellx]) {
                                     grid[celly][cellx] = 10;
                                     flipMines();
+                                    started = false;
                                 } else {
                                     flipTile(cellx, celly);
                                 }
@@ -110,12 +122,23 @@ class GWind {
                         }
                     }
                 }
+                if (!started && e.type == SDL_MOUSEBUTTONDOWN) {
+                    SDL_Point p;
+                    SDL_GetMouseState(&p.x, &p.y);
+                    if (SDL_PointInRect(&p, &face)) {
+                        begin();
+                    }
+                }
             }
             SDL_SetRenderDrawColor(renderer, 0x55, 0x55, 0x55, 0xFF);
             
             SDL_RenderClear(renderer);
             renderGrid();
-
+            if (started) {
+                SDL_RenderCopy(renderer, textures["face_pressed"], NULL, &face);
+            } else {
+                SDL_RenderCopy(renderer, textures["face_unpressed"], NULL, &face);
+            }
             SDL_RenderPresent(renderer);
         }
 
@@ -231,10 +254,11 @@ class GWind {
 
         SDL_Window* window;
         SDL_Renderer* renderer;
-        SDL_Event e; bool quit = false;
+        SDL_Event e; bool quit = false, started = true;
         map<string, SDL_Texture*> textures;
         vector<vector<int>> grid;
         vector<vector<bool>> mines;
+        SDL_Rect face;
 };
 
 int main() {
