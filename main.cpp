@@ -15,7 +15,15 @@ const string paths[] = {
     "pressed",
     "face_pressed",
     "face_unpressed",
-    "mine"
+    "mine", 
+    "type1",
+    "type2",
+    "type3",
+    "type4",
+    "type5",
+    "type6",
+    "type7",
+    "type8"
 };
 
 const int cellsize = 25;
@@ -73,8 +81,8 @@ class GWind {
                     e.type == SDL_MOUSEBUTTONUP) {
                     int x, y, cellx, celly; 
                     SDL_GetMouseState(&x, &y);
-                    if (x >= 50 && x <= cellsize * (gridwidth - 1) + 50
-                    && y >= 50 && y <= cellsize * (gridheight - 1) + 50) {
+                    if (x >= 50 && x <= cellsize * (gridwidth) + 50
+                    && y >= 50 && y <= cellsize * (gridheight) + 50) {
                         cellx = (x - 50) / cellsize;
                         celly = (y - 50) / cellsize;
                         switch (e.type)
@@ -90,8 +98,7 @@ class GWind {
                                     grid[celly][cellx] = 10;
                                     flipMines();
                                 } else {
-                                    // this is a placeholder
-                                    grid[celly][cellx] = 0; 
+                                    flipTile(cellx, celly);
                                 }
                             }
                             break;
@@ -126,7 +133,30 @@ class GWind {
                         case 0:
                             SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
                             break;
-                        
+                        case 1:
+                            SDL_RenderCopy(renderer, textures["type1"], NULL, &rect);
+                            break;
+                        case 2:
+                            SDL_RenderCopy(renderer, textures["type2"], NULL, &rect);
+                            break;
+                        case 3:
+                            SDL_RenderCopy(renderer, textures["type3"], NULL, &rect);
+                            break;
+                        case 4:
+                            SDL_RenderCopy(renderer, textures["type4"], NULL, &rect);
+                            break;
+                        case 5:
+                            SDL_RenderCopy(renderer, textures["type5"], NULL, &rect);
+                            break;
+                        case 6:
+                            SDL_RenderCopy(renderer, textures["type6"], NULL, &rect);
+                            break;
+                        case 7:
+                            SDL_RenderCopy(renderer, textures["type7"], NULL, &rect);
+                            break;
+                        case 8:
+                            SDL_RenderCopy(renderer, textures["type8"], NULL, &rect);
+                            break;
                         case 10:
                             SDL_RenderCopy(renderer, textures["mine"], NULL, &rect);
                             break;
@@ -144,6 +174,51 @@ class GWind {
                         grid[gy][gx] = 10;
                     }
                 }
+            }
+        }
+        void flipTile(int x, int y) {
+            if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
+                return;
+            }
+            if (grid[y][x] >= 0) {
+                return;
+            }
+            int mineamt = 0;
+            pair<int, int> dirs[8] = {
+                {-1, 0},
+                {-1, 1},
+                {0, 1},
+                {1, 1},
+                {1, 0},
+                {1, -1},
+                {0, -1},
+                {-1, -1}
+            };
+            for (pair<int, int> dir : dirs) {
+                int cx = x + dir.first;
+                int cy = y + dir.second;
+                if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
+                    continue;
+                }
+                if (mines[cy][cx]) {
+                    mineamt ++;
+                }
+            }
+            switch (mineamt) {
+                case 0:
+                    grid[y][x] = 0;
+                    for (pair<int, int> dir : dirs) {
+                        int cx = x + dir.first;
+                        int cy = y + dir.second;
+                        if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
+                            continue;
+                        }
+                        flipTile(cx, cy);
+                    }
+                    break;
+                default:
+                    grid[y][x] = mineamt;
+                    break;
             }
         }
         ~GWind() {
