@@ -32,6 +32,17 @@ const int gridwidth = 16;
 const int gridheight = 16;
 const int mineamount = 30;
 
+pair<int, int> dirs[8] = {
+    {-1, 0},
+    {-1, 1},
+    {0, 1},
+    {1, 1},
+    {1, 0},
+    {1, -1},
+    {0, -1},
+    {-1, -1}
+};
+
 class GWind {
     public:
         GWind(int width, int height) {
@@ -101,23 +112,21 @@ class GWind {
                         {
                         case SDL_MOUSEBUTTONDOWN:
                             if (e.button.button == SDL_BUTTON_LEFT) {
-                                grid[celly][cellx] = -2; // set to pressed
+                                if (grid[celly][cellx] == -1) {
+                                    grid[celly][cellx] = -2; // set to pressed
+                                } else if (grid[celly][cellx] >= 1 && grid[celly][cellx] <= 8) {
+                                    grid[celly][cellx] = -4; // set to chord
+                                }
                             } else if (e.button.button == SDL_BUTTON_RIGHT) {
                                 if (grid[celly][cellx] == -1) {
                                     grid[celly][cellx] = -3; // flag
+                                } else if (grid[celly][cellx] == 11) {
+                                    grid[celly][cellx] = -1;
                                 }
                             }
                             break;
                         case SDL_MOUSEBUTTONUP:
-                            // if (grid[celly][cellx] == -2) {
-                            //     if (mines[celly][cellx]) {
-                            //         grid[celly][cellx] = 10;
-                            //         flipMines();
-                            //         started = false;
-                            //     } else {
-                            //         flipTile(cellx, celly);
-                            //     }
-                            // }
+                            
                             break;
                         default:
                             if (grid[celly][cellx] < -1) {
@@ -155,6 +164,10 @@ class GWind {
                     rect.x = cellsize * gx + 50;
                     rect.y = cellsize * gy + 50;
                     switch (grid[gy][gx]) {
+                        case -4:
+                            SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
+                            chordTile(gx, gy);
+                            break;
                         case -3:
                             SDL_RenderCopy(renderer, textures["closed"], NULL, &rect);
                             flagTile(gx, gy);
@@ -217,32 +230,16 @@ class GWind {
             }
         }
         void flagTile(int x, int y) {
-            grid[y][x] = 11;
-        }
-        void flipTile(int x, int y) {
-            if (mines[y][x]) {
-                grid[y][x] = 10;
-                flipMines();
-                started = false;
-                return;
-            } 
             if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
                 return;
             }
-            if (grid[y][x] >= 0) {
-                return;
+            grid[y][x] = 11;
+        }
+        int getMines(int x, int y) {
+            if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
+                return 0;
             }
             int mineamt = 0;
-            pair<int, int> dirs[8] = {
-                {-1, 0},
-                {-1, 1},
-                {0, 1},
-                {1, 1},
-                {1, 0},
-                {1, -1},
-                {0, -1},
-                {-1, -1}
-            };
             for (pair<int, int> dir : dirs) {
                 int cx = x + dir.first;
                 int cy = y + dir.second;
@@ -253,21 +250,71 @@ class GWind {
                     mineamt ++;
                 }
             }
-            switch (mineamt) {
-                case 0:
-                    grid[y][x] = 0;
-                    for (pair<int, int> dir : dirs) {
-                        int cx = x + dir.first;
-                        int cy = y + dir.second;
-                        if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
-                            continue;
+            return mineamt;
+        }
+        void flipTile(int x, int y) {
+            if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
+                return;
+            }
+            if (mines[y][x]) {
+                grid[y][x] = 10;
+                flipMines();
+                started = false;
+            } else if (grid[y][x] < 0) {
+                int mineamt = getMines(x, y);
+                switch (mineamt) {
+                    case 0:
+                        grid[y][x] = 0;
+                        for (pair<int, int> dir : dirs) {
+                            int cx = x + dir.first;
+                            int cy = y + dir.second;
+                            if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
+                                continue;
+                            }
+                            flipTile(cx, cy);
                         }
-                        flipTile(cx, cy);
+                        break;
+                    default:
+                        grid[y][x] = mineamt;
+                        break;
+                }
+            }
+        }
+        int getFlags(int x, int y) {
+            if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
+                return 0;
+            }
+            int flagamt = 0;
+            for (pair<int, int> dir : dirs) {
+                int cx = x + dir.first;
+                int cy = y + dir.second;
+                if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
+                    continue;
+                }
+                if (grid[cy][cx] == 11) {
+                    flagamt ++;
+                }
+            }
+            return flagamt;
+        }
+        void chordTile(int x, int y) {
+            if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
+                return;
+            }
+            int mineamt = getMines(x, y);
+            int flagamt = getFlags(x, y);
+            grid[y][x] = mineamt;
+            if (mineamt == flagamt) {
+                for (pair<int, int> dir : dirs) {
+                    int cx = x + dir.first;
+                    int cy = y + dir.second;
+                    if (cx < 0 || cx >= gridwidth || cy < 0 || cy >= gridwidth) {
+                        continue;
                     }
-                    break;
-                default:
-                    grid[y][x] = mineamt;
-                    break;
+                    if (grid[cy][cx] == -1) {
+                        grid[cy][cx] = -2;
+                    }
+                }
             }
         }
         ~GWind() {
