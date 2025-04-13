@@ -23,7 +23,8 @@ const string paths[] = {
     "type5",
     "type6",
     "type7",
-    "type8"
+    "type8",
+    "flag"
 };
 
 const int cellsize = 25;
@@ -99,20 +100,24 @@ class GWind {
                         switch (e.type)
                         {
                         case SDL_MOUSEBUTTONDOWN:
-                            if (grid[celly][cellx] == -1) {
+                            if (e.button.button == SDL_BUTTON_LEFT) {
                                 grid[celly][cellx] = -2; // set to pressed
+                            } else if (e.button.button == SDL_BUTTON_RIGHT) {
+                                if (grid[celly][cellx] == -1) {
+                                    grid[celly][cellx] = -3; // flag
+                                }
                             }
                             break;
                         case SDL_MOUSEBUTTONUP:
-                            if (grid[celly][cellx] == -2) {
-                                if (mines[celly][cellx]) {
-                                    grid[celly][cellx] = 10;
-                                    flipMines();
-                                    started = false;
-                                } else {
-                                    flipTile(cellx, celly);
-                                }
-                            }
+                            // if (grid[celly][cellx] == -2) {
+                            //     if (mines[celly][cellx]) {
+                            //         grid[celly][cellx] = 10;
+                            //         flipMines();
+                            //         started = false;
+                            //     } else {
+                            //         flipTile(cellx, celly);
+                            //     }
+                            // }
                             break;
                         default:
                             if (grid[celly][cellx] < -1) {
@@ -150,6 +155,14 @@ class GWind {
                     rect.x = cellsize * gx + 50;
                     rect.y = cellsize * gy + 50;
                     switch (grid[gy][gx]) {
+                        case -3:
+                            SDL_RenderCopy(renderer, textures["closed"], NULL, &rect);
+                            flagTile(gx, gy);
+                            break;
+                        case -2:
+                            SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
+                            flipTile(gx, gy);
+                            break;
                         case -1:
                             SDL_RenderCopy(renderer, textures["closed"], NULL, &rect);
                             break;
@@ -183,6 +196,9 @@ class GWind {
                         case 10:
                             SDL_RenderCopy(renderer, textures["mine"], NULL, &rect);
                             break;
+                        case 11:
+                            SDL_RenderCopy(renderer, textures["flag"], NULL, &rect);
+                            break;
                         default:
                             SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
                             break;
@@ -195,11 +211,21 @@ class GWind {
                 for (int gx = 0; gx < gridwidth; gx ++) {
                     if (mines[gy][gx]) {
                         grid[gy][gx] = 10;
+                        mines[gy][gx] = false;
                     }
                 }
             }
         }
+        void flagTile(int x, int y) {
+            grid[y][x] = 11;
+        }
         void flipTile(int x, int y) {
+            if (mines[y][x]) {
+                grid[y][x] = 10;
+                flipMines();
+                started = false;
+                return;
+            } 
             if (x < 0 || x >= gridwidth || y < 0 || y >= gridwidth) {
                 return;
             }
