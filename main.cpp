@@ -30,7 +30,7 @@ const string paths[] = {
 const int cellsize = 25;
 const int gridwidth = 16;
 const int gridheight = 16;
-const int mineamount = 30;
+const int mineamount = 40;
 
 pair<int, int> dirs[8] = {
     {-1, 0},
@@ -167,14 +167,26 @@ class GWind {
                         case -4:
                             SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
                             chordTile(gx, gy);
+                            if (checkWin()) {
+                                cout << "You win!\n";
+                                started = false;
+                            }
                             break;
                         case -3:
                             SDL_RenderCopy(renderer, textures["closed"], NULL, &rect);
                             flagTile(gx, gy);
+                            if (checkWin()) {
+                                cout << "You win!\n";
+                                started = false;
+                            }
                             break;
                         case -2:
                             SDL_RenderCopy(renderer, textures["pressed"], NULL, &rect);
                             flipTile(gx, gy);
+                            if (checkWin()) {
+                                cout << "You win!\n";
+                                started = false;
+                            }
                             break;
                         case -1:
                             SDL_RenderCopy(renderer, textures["closed"], NULL, &rect);
@@ -218,6 +230,19 @@ class GWind {
                     }
                 }
             }
+        }
+        bool checkWin() {
+            for (int gy = 0; gy < gridheight; gy ++) {
+                for (int gx = 0; gx < gridwidth; gx ++) {
+                    if (mines[gy][gx] && grid[gy][gx] != 11) {
+                        return false;
+                    }
+                    if (grid[gy][gx] < 0) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
         void flipMines() {
             for (int gy = 0; gy < gridheight; gy ++) {
